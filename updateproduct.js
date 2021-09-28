@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== "production") {
     let script_conf = await readFileSync("update.json");
     script_conf = JSON.parse(script_conf);
 
-    if (script_conf.all_product_listed) {
+    if (script_conf.all_product_listed == "listed") {
         logger.info(`Tout les produits ont été déja listé`);
     } else {
         await listShopifyProducts();
@@ -45,11 +45,7 @@ if (process.env.NODE_ENV !== "production") {
 
     await updatePriceAndQuantity();
 
-    let script_json_data = {
-        all_product_listed: false,
-        last_file: 0,
-        last_product: 0,
-    };
+    let script_json_data = {all_product_listed: "non-listed",last_file: "0",last_product: "0"}
     await writeJsonFile("update.json", script_json_data);
 })();
 
@@ -75,6 +71,8 @@ async function listShopifyProducts() {
             break;
         }
     }
+    let script_json_data = {all_product_listed: "listed",last_file: "0",last_product: "0"}
+    await writeJsonFile("update.json", script_json_data);
 }
 
 async function updatePriceAndQuantity() {
@@ -88,7 +86,7 @@ async function updatePriceAndQuantity() {
     let script_conf = await readFileSync("update.json");
     script_conf = JSON.parse(script_conf);
 
-    let i = script_conf.last_file;
+    let i = parseInt(script_conf.last_file);
 
     while (i < files.length) {
         logger.info(`Tout les produits ont été déja listé`);
@@ -106,10 +104,13 @@ async function updatePriceAndQuantity() {
             product_arr.push(product);
         });
 
-        let script_conf = (await readFileSync("update.json")).toString();
+        let script_conf = await readFileSync("update.json");
+
+        console.log("script_conf: ", script_conf);
+
         script_conf = JSON.parse(script_conf);
 
-        let product_index = script_conf.last_product;
+        let product_index = parseInt(script_conf.last_product);
 
         while (product_index < product_arr.length) {
             logger.info(`iteration produit: ${product_index}`);
@@ -161,21 +162,14 @@ async function updatePriceAndQuantity() {
                 quantity
             );
 
-            let script_json_data = {
-                all_product_listed: false,
-                last_file: i,
-                last_product: product_index + 1,
-            };
+            let script_json_data = {all_product_listed: "non-listed",last_file: i.toString(),last_product: (product_index + 1).toString(),};
             writeJsonFile("update.json", script_json_data);
 
             product_index++;
         }
 
-        let script_json_data = {
-            all_product_listed: false,
-            last_file: 0,
-            last_product: i + 1,
-        };
+        let script_json_data = {all_product_listed: "non-listed",last_file: (i + 1).toString(),last_product: "0"};
+        writeJsonFile("update.json", script_json_data);
 
         i++;
     }
@@ -217,9 +211,9 @@ async function getNextLink(product_response) {
 }
 
 async function readFileSync(path) {
-    let script_conf = fs.readFileSync(path, "utf8", (err) => {
+    let script_conf = fs.readFileSync(path, "utf8", (err, jsonString) => {
         if (err) {
-            logger.error(`Lecture du fichier ${path} a echoué, erreur : ${err}`);
+            logger.error(`Lecture du fichier script.json a echoué, erreur : ${err}`);
             return;
         }
     });
@@ -227,8 +221,12 @@ async function readFileSync(path) {
 }
 
 async function writeJsonFile(path, json_data) {
-    fs.writeFile(path, JSON.stringify(json_data), function(err, result) {
-        if (err) logger.error(`error : ${err}`);
+    fs.writeFileSync(path, JSON.stringify(json_data), function(err, result) {
+        if (err) {
+            logger.error(
+                `Erreur d'ecritutre du fichier script.json, l'erreur : ${err}`
+            );
+        }
     });
 }
 
